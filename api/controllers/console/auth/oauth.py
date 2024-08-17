@@ -90,8 +90,9 @@ class OAuthCallback(Resource):
 
         if dify_config.EDITION == 'SELF_HOSTED':
             ce_tenant = TenantService.get_first_tenant_for_ce()
-            TenantService.create_tenant_member(ce_tenant, account)
-        else:
+            joined_tennats = TenantService.get_join_tenants(account)
+            if not any(tenant.id == ce_tenant.id for tenant in joined_tennats):
+                TenantService.create_tenant_member(ce_tenant, account)
             TenantService.create_owner_tenant_if_not_exist(account)
 
         token = AccountService.login(account, ip_address=get_remote_ip(request))
