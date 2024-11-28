@@ -11,6 +11,7 @@ from core.model_runtime.entities.common_entities import I18nObject
 from core.model_runtime.entities.llm_entities import LLMMode, LLMResult, LLMResultChunk, LLMResultChunkDelta
 from core.model_runtime.entities.message_entities import (
     AssistantPromptMessage,
+    AudioPromptMessageContent,
     ImagePromptMessageContent,
     PromptMessage,
     PromptMessageContent,
@@ -126,6 +127,12 @@ class OAIAPICompatLargeLanguageModel(_CommonOaiApiCompat, LargeLanguageModel):
 
             completion_type = LLMMode.value_of(credentials["mode"])
 
+            audio_support = credentials.get("audio_support", "not_support")
+            if audio_support == "support":
+                data["max_tokens"] = None
+                data["audio"] = {"voice": "alloy", "format": "wav"}
+                data["modalities"] = ["audio", "text"]
+
             if completion_type is LLMMode.CHAT:
                 data["messages"] = [
                     {"role": "user", "content": "ping"},
@@ -191,6 +198,10 @@ class OAIAPICompatLargeLanguageModel(_CommonOaiApiCompat, LargeLanguageModel):
         vision_support = credentials.get("vision_support", "not_support")
         if vision_support == "support":
             features.append(ModelFeature.VISION)
+
+        audio_support = credentials.get("audio_support", "not_support")
+        if audio_support == "support":
+            features.append(ModelFeature.AUDIO)
 
         entity = AIModelEntity(
             model=model,
@@ -640,6 +651,16 @@ class OAIAPICompatLargeLanguageModel(_CommonOaiApiCompat, LargeLanguageModel):
                         sub_message_dict = {
                             "type": "image_url",
                             "image_url": {"url": message_content.data, "detail": message_content.detail.value},
+                        }
+                        sub_messages.append(sub_message_dict)
+                    elif message_content.type == PromptMessageContentType.AUDIO:
+                        message_content = cast(AudioPromptMessageContent, message_content)
+                        sub_message_dict = {
+                            "type": "input_audio",
+                            "input_audio": {
+                                "data": message_content.data,
+                                "format": message_content.format,
+                            },
                         }
                         sub_messages.append(sub_message_dict)
 
